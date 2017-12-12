@@ -1,2 +1,2 @@
 # Python
-All Of My Python Files Completed For COllege.
+All Of My Python Files Completed For College.
