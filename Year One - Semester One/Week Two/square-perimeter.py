@@ -2,15 +2,3 @@
 
 side=input()
 print (4*side)
-
-
-
-
-
-
-
-
-
-
-
-
