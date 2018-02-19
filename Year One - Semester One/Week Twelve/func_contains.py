@@ -1,5 +1,5 @@
 
-import sunc_bsearch.py
+import func_bsearch.py
 
 def contains(a,q):
    if bsearch(a,q)
