@@ -1,95 +1,169 @@
 import sys
 
-d = sys.argv[1]
 
+class Boggle(object):
 
-def get_words(d_file):
-    with open(d_file, 'r') as df:
-        words = [line.strip() for line in df.readlines()]
-        print(words)
+    board_size = 4
 
-    return words
+    def __init__(self, file):
+        '''Boggle board class constructor
 
+        :param file: Path to the dictionary file
+        :return: None'''
 
-def get_lines(file):
-    with open(file, 'r') as f:
-        copy = [c for c in f.readlines()]
-        line_1 = [line[0:4] for line in copy]
-        line_2 = [line[4:8] for line in copy]
-        line_3 = [line[8:12] for line in copy]
-        line_4 = [line[12:16] for line in copy]
+        self.size = Boggle.board_size
+        self.board = [[' '] * self.size for _ in range(self.size)]
+        self.adjacency = self.build_adjacency()
+        self.words, self.prefixes = self.load_dictionary(file)
 
-        column_1 = [line.strip()[::4] for line in copy]
-        column_2 = [line.strip()[1::4] for line in copy]
-        column_3 = [line.strip()[2::4] for line in copy]
-        column_4 = [line.strip()[3::4] for line in copy]
+        # Points per word of given length
+        points = {3: 1,
+                  5: 2,
+                  6: 3,
+                  7: 5,
+                  8: 11}
 
-        diag_left_1 = [line[2::3] for line in copy]
-        diag_left_2 = [line[3::3] for line in copy]
-        diag_left_3 = [line[7::3] for line in copy]
+        self.points = [0 for _ in range(self.size**2)]
+        #print (len(self.points))
+        for i in range(len(self.points)):
 
-        diag_right_1 = [line[1::5] for line in copy]
-        diag_right_2 = [line[::5] for line in copy]
-        diag_right_3 = [line[4::5] for line in copy]
+            if i in points:
+                #print (i)
+                self.points[i] = points[i]
 
-        points = [0] * len(copy)
+            else:
+                #print ('l = ' + str(i))
+                #print (self.points[i-1])
+                self.points[i] = self.points[i - 1]
 
-    return (line_1, line_2, line_3, line_4, column_1, column_2, column_3, column_4,
-            diag_left_1, diag_left_2, diag_left_3, diag_right_1, diag_right_2,
-            diag_right_3), points
+    def adjacent(self, pos):
+        '''Finds all adjacent positions for a given position on the board
 
+        :param pos: A 2-tuple giving row and column of a position
+        :return: A list of positions adjacent to the given position'''
 
-def calculate_points(words, points):
-    for word in words:
-        #        print (word)
-        if len(word) > 8:
-            points += 11
+        row, col = pos
+        adj = []
+        for i in [-1, 0, 1]:
+            for j in [-1, 0, 1]:
+                new_row = row + i
+                new_col = col + j
 
-        elif len(word) == 7:
-            points += 5
+                if 0 <= new_row < self.size and 0 <= new_col < self.size and not (i == j == 0):
+                    adj.append((new_row, new_col))
 
-        elif len(word) == 6:
-            poins += 3
+        return adj
 
-        elif len(word) == 5:
-            points += 2
+    def build_adjacency(self):
+        '''Builds the adjacency lookup for each position on the board
 
-        elif len(word) == 3 or len(word) == 4:
-            points += 1
+        :return: A dictionary of adjacent positions for each position on the board'''
 
-    return points
+        adjacency = dict()
+        for row in range(0, self.size):
 
+            for col in range(0, self.size):
+                adjacency[(row, col)] = self.adjacent((row, col))
 
-def main():
-    (lines_nd_columns_nd_diags, points) = get_lines(sys.argv[1])
+        return adjacency
 
-    # print(lines_nd_columns_nd_diags)
-#    print(points)
+    def load_dictionary(self, file):
+        '''Loads a dictionary file into Boggle object's word list
 
-    num = 0
-    while num < len(points):
-        words = []
-        print('________________________________________________')
+        :param name: Path to the dictionary file
+        :return: None'''
 
-        for lnc in lines_nd_columns_nd_diags:
-            # print(lnc[num])
-            for n in range(0, 5):
-                for m in range(0, n):
-                    # print(lnc[num][n:m])
-                    if lnc[num][n:m] in get_words(d):
-                        words.append(lnc[num][n:m])
+        prefixes = set()
+        with open(file, 'r') as f:
 
-                for m in range(n, 5):
-                    # print(lnc[num][n:m])
-                    if lnc[num][n:m] in d:
-                        words.append(lnc[num][n:m])
+            lines = [line.strip().upper() for line in f.readlines()]
 
-        print(words)
-        points[num] = calculate_points(words, points[num])
-        print(points[num])
+            words = set(word for word in lines if len(word) > 2)
 
-        num += 1
+            for line in lines:
+                for i in range(len(line)):
+                    prefixes.add(line[:i])
+
+        return words, prefixes
+
+    def get_letter(self, pos):
+        '''Gets the letter at a given position
+
+        :param pos: A 2-tuple giving row and column location of a position
+        :return: A letter at the given position'''
+
+        return self.board[pos[0]][pos[1]]
+
+    def set_board(self, letters):
+        '''Sets the letters on the board
+
+        :param letters: A string giving the letters, row by row
+        :return: None'''
+
+        for row in range(self.size):
+            index = row * self.size
+            row_letters = letters[index:index + self.size]
+
+            for col, letter in enumerate(row_letters):
+                self.board[row][col] = letter
+
+    def find_words(self):
+        '''Finds all words on the board
+
+        :return: A set of words found on the board'''
+
+        words = set()
+        for row in range(self.size):
+
+            for col in range(self.size):
+                words |= self.find_words_pos((row, col))
+
+        return words
+
+    def find_words_pos(self, pos):
+        '''Finds words starting at a given position on the board
+
+        :param pos: A 2-tuple giving row and column on the board
+        :return: A set of words starting at the given position'''
+
+        stack = [(n, [pos], self.get_letter(pos)) for n in self.adjacency[pos]]
+        words = set()
+
+        while stack:
+            curr, path, chars = stack.pop()
+            curr_char = self.get_letter(curr)
+            curr_chars = chars + curr_char
+
+            # Check if path forms a word
+            if curr_chars in self.words:
+                words.add(curr_chars)
+
+            # Check if path forms the prefix of a word
+            if curr_chars in self.prefixes:
+                # Get adjacent positions
+                curr_adj = self.adjacency[curr]
+
+                # Check if adjacent positions have already been visited
+                stack.extend([(n, path + [curr], curr_chars)
+                              for n in curr_adj if n not in path])
+
+        return words
+
+    def score(self):
+        score = 0
+        words = self.find_words()
+
+        for word in words:
+            score += self.points[len(word)]
+
+        return score
 
 
 if __name__ == '__main__':
-    main()
+    b = Boggle(sys.argv[2])
+    with open(sys.argv[1]) as f:
+
+        for line in f.readlines():
+            b.set_board(line.strip().upper())
+            # print(b.find_words())
+            print('Possible points: {}'.format(b.score()))
